@@ -22,8 +22,8 @@ def update_target_graph(from_scope, to_scope):
 
 def process_frame(frame):
     frame = frame[34:34 + 180, :160]
-    frame = scipy.misc.imresize(s, [84, 84])
-    frame = s.mean(2)
+    frame = scipy.misc.imresize(frame, [84, 84])
+    frame = frame.mean(2)
     frame = frame.astype(np.float32)
     frame *= (1.0 / 255.0)
     frame = np.reshape(frame, [84, 84])
