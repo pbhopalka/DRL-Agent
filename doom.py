@@ -16,71 +16,72 @@ from helper import *
 
 class A3C(object):
     def __init__(self, ob_space, ac_space, scope, trainer):
-        self.inputs = tf.placeholder(shape=[None] + list(ob_space), dtype=tf.float32)
+        with tf.variable_scope(scope):
+            self.inputs = tf.placeholder(shape=[None] + list(ob_space), dtype=tf.float32)
 
-        self.imageIn = tf.reshape(self.inputs, shape=[-1, 84, 84, 1])
+            self.imageIn = tf.reshape(self.inputs, shape=[-1, 84, 84, 1])
 
-        self.conv1 = slim.conv2d(
-            activation_fn=tf.nn.elu,
-            inputs=self.imageIn,
-            num_outputs=16,
-            kernel_size=[8, 8],
-            stride=[4, 4],
-            padding="VALID")
+            self.conv1 = slim.conv2d(
+                activation_fn=tf.nn.elu,
+                inputs=self.imageIn,
+                num_outputs=16,
+                kernel_size=[8, 8],
+                stride=[4, 4],
+                padding="VALID")
 
-        self.conv2 = slim.conv2d(
-            activation_fn=tf.nn.elu,
-            inputs=self.conv1,
-            num_outputs=32,
-            kernel_size=[4, 4],
-            stride=[2, 2],
-            padding="VALID")
+            self.conv2 = slim.conv2d(
+                activation_fn=tf.nn.elu,
+                inputs=self.conv1,
+                num_outputs=32,
+                kernel_size=[4, 4],
+                stride=[2, 2],
+                padding="VALID")
 
-        hidden = slim.fully_connected(
-            slim.flatten(self.conv2), 256, activation_fn=tf.nn.elu)
+            hidden = slim.fully_connected(
+                slim.flatten(self.conv2), 256, activation_fn=tf.nn.elu)
 
-        self.policy = slim.fully_connected(
-            hidden,
-            ac_space,
-            activation_fn=tf.nn.softmax,
-            weights_initializer=normalized_columns_initializer(0.01),
-            biases_initializer=None)
+            self.policy = slim.fully_connected(
+                hidden,
+                ac_space,
+                activation_fn=tf.nn.softmax,
+                weights_initializer=normalized_columns_initializer(0.01),
+                biases_initializer=None)
 
-        self.value = slim.fully_connected(
-            hidden,
-            1,
-            activation_fn=None,
-            weights_initializer=normalized_columns_initializer(1.0),
-            biases_initializer=None)
+            self.value = slim.fully_connected(
+                hidden,
+                1,
+                activation_fn=None,
+                weights_initializer=normalized_columns_initializer(1.0),
+                biases_initializer=None)
 
-        if scope != 'global':
-            self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
-            self.actions_onehot = tf.one_hot(
-                self.actions, ac_space, dtype=tf.float32)
-            self.target_v = tf.placeholder(shape=[None], dtype=tf.float32)
-            self.advantage = tf.placeholder(shape=[None], dtype=tf.float32)
+            if scope != 'global':
+                self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
+                self.actions_onehot = tf.one_hot(
+                    self.actions, ac_space, dtype=tf.float32)
+                self.target_v = tf.placeholder(shape=[None], dtype=tf.float32)
+                self.advantage = tf.placeholder(shape=[None], dtype=tf.float32)
 
-            self.responsible_output = tf.reduce_sum(
-                self.policy * self.actions_onehot, [1])
+                self.responsible_output = tf.reduce_sum(
+                    self.policy * self.actions_onehot, [1])
 
-            self.value_loss = 0.5 * tf.reduce_mean(
-                tf.square(self.target_v - tf.reshape(self.value, [-1])))
-            self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy))
-            self.policy_loss = -tf.reduce_sum(
-                tf.log(self.responsible_output) * self.advantage)
-            self.loss = 0.5 * self.value_loss + self.policy_loss - self.entropy * 0.01
+                self.value_loss = 0.5 * tf.reduce_mean(
+                    tf.square(self.target_v - tf.reshape(self.value, [-1])))
+                self.entropy = -tf.reduce_sum(self.policy * tf.log(self.policy))
+                self.policy_loss = -tf.reduce_sum(
+                    tf.log(self.responsible_output) * self.advantage)
+                self.loss = 0.5 * self.value_loss + self.policy_loss - self.entropy * 0.01
 
-            #Get gradient from local network using local losses
-            local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
-                                           scope)
-            self.gradients = tf.gradients(self.loss, local_vars)
-            self.var_norms = tf.global_norm(local_vars)
-            grads, self.grad_norms = tf.clip_by_global_norm(
-                self.gradients, 40.0)
+                #Get gradient from local network using local losses
+                local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                            scope)
+                self.gradients = tf.gradients(self.loss, local_vars)
+                self.var_norms = tf.global_norm(local_vars)
+                grads, self.grad_norms = tf.clip_by_global_norm(
+                    self.gradients, 40.0)
 
-            #Apply local gradient to global network
-            global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'global')
-            self.apply_grads = trainer.apply_gradients(zip(grads, global_vars))
+                #Apply local gradient to global network
+                global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'global')
+                self.apply_grads = trainer.apply_gradients(zip(grads, global_vars))
 
 
 class Worker(object):
