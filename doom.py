@@ -152,7 +152,6 @@ class Worker(object):
                 episode_frames = []
                 episode_reward = 0
                 episode_step_count = 0
-                d = False
 
                 observation = self.env.reset()
                 episode_frames.append(observation)
@@ -166,7 +165,7 @@ class Worker(object):
 
                     print "Value obtained: ", value
 
-                    new_observation, reward, done, info = env.step(
+                    new_observation, reward, done, _ = env.step(
                         action_vector.argmax())
 
                     episode_buffer.append([
@@ -183,7 +182,7 @@ class Worker(object):
                     episode_frames.append(observation)
                     observation = process_frame(observation)
 
-                    #If episode hasn't ended but experience replay is full, 
+                    #If episode hasn't ended but experience replay is full,
                     #then we update using experience rollout
                     if len(
                             episode_buffer

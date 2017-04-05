@@ -7,4 +7,8 @@ This code is heavily inspired from the works of [OpenAI/universe-starter-agent](
 feel like doing so.
 
 We will be implementating a bit different algorithm in a few days. It will supposedly be a minor modification
-to the propsed algorithm. 
+to the propsed algorithm.
+
+To run the code, simply type:
+
+python doom.py 
