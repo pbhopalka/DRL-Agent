@@ -1,5 +1,8 @@
 import numpy as np
 import tensorflow as tf
+import logging
+
+logging.getLogger().setLevel(logging.INFO)
 
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
@@ -41,5 +44,20 @@ class Model():
         x = tf.reshape(x, [-1, 256])
 
         self.policy = fully_connected(x, ac_space, "action", normalized_columns_initializer(0.01))
+        self.action = tf.one_hot(self.policy, ac_space)
         self.value = tf.reshape(fully_connected(x, ac_space, "value", normalized_columns_initializer(1.0)), [-1])
+    
+    def act(self, state):
+        sess = tf.get_default_session()
+        action_onehot, value = sess.run([self.action, self.value], {self.x: [state]})
         
+        logging.info("Action:")
+        logging.info(action_onehot)
+        logging.info(value)
+
+        return action_onehot, value
+
+    def value(self, state):
+        sess = tf.get_default_session()
+        val = sess.run(self.value, {self.x: [state]})[0]
+        return val
