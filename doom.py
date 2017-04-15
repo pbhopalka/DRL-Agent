@@ -13,7 +13,6 @@ from time import time
 
 from helper import *
 
-
 class A3C(object):
     def __init__(self, ob_space, ac_space, scope, trainer):
         with tf.variable_scope(scope):
@@ -308,6 +307,7 @@ with tf.Session() as sess:
     for worker in workers:
         worker_work = lambda: worker.work(max_episode_length, gamma, sess, coord, saver)
         t = threading.Thread(target=(worker_work))
+        t.daemon = True
         t.start()
         sleep(0.5)
         worker_thread.append(t)
