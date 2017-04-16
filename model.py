@@ -78,7 +78,7 @@ class Model():
         epsila_greedy = tf.multinomial(self.policy, 1)[0]
         self.action = tf.one_hot(epsila_greedy, ac_space)
         self.value = tf.reshape(fully_connected(
-            x, ac_space, "value", normalized_columns_initializer(1.0)), [-1])
+            x, 1, "value", normalized_columns_initializer(1.0)), [-1])
 
     def act(self, state):
         sess = tf.get_default_session()
