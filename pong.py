@@ -32,7 +32,8 @@ class A3C(object):
             
             if scope != 'global':
                 # setting 6 as the env.action_space.n
-                self.actions = tf.placeholder(shape=[None, 6], dtype=tf.float32)
+                self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
+                self.action_onehot = tf.one_hot(self.actions, ac_space, dtype=tf.float32)
                 self.target_v = tf.placeholder(shape=[None], dtype=tf.float32)
                 self.advantage = tf.placeholder(shape=[None], dtype=tf.float32)
 
@@ -40,7 +41,7 @@ class A3C(object):
                 self.policy = tf.nn.softmax(self.network.policy)
 
                 self.responsible_output = tf.reduce_sum(
-                    self.log_policy * self.actions, [1])
+                    self.log_policy * self.action_onehot, [1])
 
                 self.value_loss = 0.5 * tf.reduce_mean(
                     tf.square(self.target_v - self.network.value))
@@ -90,11 +91,10 @@ class Worker(object):
         self.env = env
 
     def train(self, rollout, sess, gamma, value_state):
-        rollout = np.array(rollout)
-        observation = rollout[:, 0]
-        # print "Observation size:", observation.size 
-        actions = rollout[:, 1]
-        print actions.size
+        # rollout = np.asarray(rollout)
+        observation = np.asarray([item[0] for item in rollout])
+        rollout = np.asarray(rollout)
+        actions = np.asarray(rollout[:, 1])
         rewards = rollout[:, 2]
         next_observation = rollout[:, 3]
         values = rollout[:, 5]
@@ -105,9 +105,6 @@ class Worker(object):
         self.value_plus = np.asarray(values.tolist() + [value_state])
         advantage = rewards + gamma * self.value_plus[1:] - self.value_plus[:-1]
         advantage = discount(advantage, gamma)
-        print "Advantage", advantage[0]
-        print 
-        print "Advantage detail", advantage
 
         #Update global network using gradients from loss
         #Generate data to save data periodically
@@ -115,15 +112,16 @@ class Worker(object):
             self.local_AC.target_v: discounted_reward,
             self.local_AC.network.x: observation,
             self.local_AC.actions: actions,
-            self.local_AC.advantage: advantage,
+            self.local_AC.advantage: advantage
         }
-        value_loss, policy_loss, entropy_loss, grad_norm, var_norm, _ = sess.run(
+        fetched = sess.run(
             [
                 self.local_AC.value_loss, self.local_AC.policy_loss,
                 self.local_AC.entropy, self.local_AC.grad_norms,
                 self.local_AC.var_norms, self.local_AC.apply_grads
             ],
             feed_dict=feed_dict)
+        value_loss, policy_loss, entropy_loss, grad_norm, var_norm = fetched[0], fetched[1], fetched[2], fetched[3], fetched[4]
         return value_loss / len(rollout), policy_loss / len(
             rollout), entropy_loss / len(rollout), grad_norm, var_norm
 
@@ -148,8 +146,6 @@ class Worker(object):
                 while not done:
                     action_vector, value = self.local_AC.network.act(observation)
                     
-                    # logger.info(action_vector)
-
                     new_observation, reward, done, info = self.env.step(
                         action_vector.argmax())
                     
@@ -159,10 +155,10 @@ class Worker(object):
                     episode_frames.append(new_observation)
 
                     episode_buffer.append([
-                        observation, action_vector, reward,
-                        new_observation, done, value
+                        observation, action_vector.argmax(), reward,
+                        new_observation, done, value[0]
                     ])
-                    episode_values.append(value)
+                    episode_values.append(value[0])
 
                     episode_reward += reward
                     total_steps += 1
@@ -190,6 +186,7 @@ class Worker(object):
                     
                     # episode_step_count is the total number of frames that is taken as inputs
                     if episode_step_count >= max_episode_length - 1 or done:
+                        logging.info("Episode count: %d, episode reward: %d", episode_count, episode_reward)
                         if not done:
                             logging.info("Terminated after episode step count - %d", episode_step_count)
                         break
@@ -215,28 +212,32 @@ class Worker(object):
                     mean_length = np.mean(self.episode_length[-5:])
                     mean_value = np.mean(self.episode_mean_values[-5:])
 
-                    tf.summary.scalar("Perf/Reward", float(mean_reward))
-                    tf.summary.scalar('Perf/Episode Length', float(mean_length))
-                    tf.summary.scalar("Perf/Value", float(mean_value))
-                    tf.summary.image("Model/Input", observation)
-                    tf.summary.image("Intermediate/After conv", self.local_AC.network.after_conv)
-                    tf.summary.scalar("Losses/Value Loss", float(value_loss))
-                    tf.summary.scalar("Losses/Policy Loss", float(policy_loss))
-                    tf.summary.scalar("Losses/Entropy Loss", float(entropy_loss))
-                    tf.summary.scalar("Norm/Gradient Norm", float(grad_norm))
-                    tf.summary.scalar("Norm/Variable Norm", float(var_norm))
-                    self.summary_operator = tf.merge_all_summaries()
+                    summary = tf.Summary()
 
-                    summary = sess.run(self.summary_operator)
-
+                    summary.value.add(
+                        tag='Perf/Reward', simple_value=float(mean_reward))
+                    summary.value.add(
+                        tag='Perf/Length', simple_value=float(mean_length))
+                    summary.value.add(
+                        tag='Perf/Value', simple_value=float(mean_value))
+                    summary.value.add(
+                        tag='Losses/Value Loss',
+                        simple_value=float(value_loss))
+                    summary.value.add(
+                        tag='Losses/Policy Loss',
+                        simple_value=float(policy_loss))
+                    summary.value.add(
+                        tag='Losses/Entropy', simple_value=float(entropy_loss))
+                    summary.value.add(
+                        tag='Losses/Grad Norm', simple_value=float(grad_norm))
+                    summary.value.add(
+                        tag='Losses/Var Norm', simple_value=float(var_norm))
                     self.summary_writer.add_summary(summary, episode_count)
 
                     self.summary_writer.flush()
 
                 # if self.name == 'worker_0':
                 global_episode_number = sess.run(self.increment)
-                logging.info("Global number: %d", global_episode_number)
-
                 episode_count += 1
 
 
@@ -249,10 +250,7 @@ tf.reset_default_graph()
 
 if not os.path.exists(model_path):
     os.makedirs(model_path)
-
-if not os.path.exists('./frames'):
-    os.makedirs('./frames')
-
+    
 env = gym.make("Pong-v0")
 s_size = env.observation_space.shape
 a_size = env.action_space.n
@@ -264,7 +262,8 @@ global_episodes = tf.get_variable("global_episode", [], tf.int32,
     tf.constant_initializer(0, tf.int32), trainable=False)
 trainer = tf.train.AdamOptimizer(learning_rate=1e-4)
 master_network = A3C(s_size, a_size, 'global', None)
-num_workers = 4
+num_workers = multiprocessing.cpu_count()
+# num_workers = 2
 workers = []
 
 for i in range(num_workers):
