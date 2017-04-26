@@ -39,7 +39,7 @@ def conv(x, num_filters, name, filter_size=(3, 3), stride=(1, 1), pad="SAME", dt
 
         # Getting the weights and bias
         w = tf.get_variable("W", filter_shape, dtype,
-                            tf.random_uniform_initializer(-w_bound, w_bound))
+                            initializer=tf.random_uniform_initializer(-w_bound, w_bound))
         b = tf.get_variable("b", [1, 1, 1, num_filters],
                             initializer=tf.constant_initializer(0.0))
 
@@ -79,15 +79,16 @@ class Model():
         self.action = tf.one_hot(epsila_greedy, ac_space)
         self.value = tf.reshape(fully_connected(
             x, 1, "value", normalized_columns_initializer(1.0)), [-1])
+        self.var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name) 
 
     def act(self, state):
         sess = tf.get_default_session()
         action_onehot, value = sess.run(
-            [self.action, self.value], {self.x: [state]})
+            [self.action, self.value], feed_dict={self.x: [state]})
 
         return action_onehot, value
 
     def val(self, state):
         sess = tf.get_default_session()
-        val = sess.run(self.value, {self.x: [state]})[0]
+        val = sess.run(self.value, feed_dict={self.x: [state]})[0]
         return val

@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import scipy
+import scipy.signal
 
 
 # Copies one set of variables to another.
