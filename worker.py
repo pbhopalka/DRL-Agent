@@ -19,15 +19,18 @@ def run_game(env_name, number, server):
         # logger.info("Intializing parameters")
         sess.run(init_all_op)
 
-    logdir = '/tmp/pong-worker/'
+    saver = tf.train.Saver(max_to_keep=5)
+    logdir = '/tmp/pong-worker-LSTM/'
+    save_path = logdir + "model/"
     config = tf.ConfigProto(device_filters=["/job:ps", "/job:worker/task:"+str(number)+"/cpu:0"])
     summary_writer = tf.summary.FileWriter(logdir + "train_"+str(number))
 
     # Using tf.train.Supervisor
     # TODO: Expanded version of this
     is_chief = (number == 0)
-    sv = tf.train.Supervisor(is_chief=is_chief, logdir=logdir, saver=None, summary_op=None, init_op=init_op, init_fn=init_fn, summary_writer=summary_writer,
-                            ready_op=tf.report_uninitialized_variables(var_to_save), global_step=actor_critic.global_step, save_summaries_secs=30)
+    sv = tf.train.Supervisor(is_chief=is_chief, logdir=logdir, saver=saver, summary_op=None, init_op=init_op, init_fn=init_fn, summary_writer=summary_writer,
+                            ready_op=tf.report_uninitialized_variables(var_to_save), global_step=actor_critic.global_step, 
+                            save_model_secs=30, save_summaries_secs=30)
 
     num_global_steps = 100000000
 
@@ -91,7 +94,7 @@ def main():
 
     if arguments.job_name == "worker":
         server = tf.train.Server(cluster, job_name="worker", task_index=arguments.task, 
-                            config=tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=6))
+                            config=tf.ConfigProto(intra_op_parallelism_threads=2, inter_op_parallelism_threads=2))
         run_game(arguments.env_id, arguments.task, server)
 
     else:

@@ -14,8 +14,8 @@ class ReplayBuffer(object): #for storing the experience replays
         self.buffer = []
         self.value_state = 0
 
-    def add(self, s, a, r, t, s2): #state, action, reward, terminal(game over), new state
-        experience = (s, a, r, t, s2)
+    def add(self, s, a, r, t, s2, feature): #state, action, reward, values, new state, c, h
+        experience = (s, a, r, t, s2, feature)
         self.buffer.append(experience)
         self.count += 1
 
@@ -43,8 +43,9 @@ class ReplayBuffer(object): #for storing the experience replays
         r_batch = np.asarray([_[2] for _ in batch])
         t_batch = np.asarray([_[3] for _ in batch])
         s2_batch = np.asarray([_[4] for _ in batch])
+        features = [_[5] for _ in batch][0]
 
-        return s_batch, a_batch, r_batch, t_batch, self.value_state
+        return s_batch, a_batch, r_batch, t_batch, features, self.value_state
 
     def clear(self):
         self.buffer = []
@@ -56,6 +57,7 @@ class RunThread(threading.Thread):
         self.queue = Queue.Queue(5)
         self.env = env
         self.policy = policy
+        self.features = None
         self.number_local_steps = number_local_steps
         self.daemon = True
         self.sess = None
@@ -81,47 +83,51 @@ def run_game_instance(env, policy, number_local_steps, summary_writer):
     episode_step_count = 0 #length
 
     observation = env.reset()
-
+    feature = policy.state_init
+    print "feature", feature
     while True:
         buffer_list = ReplayBuffer()
 
         for _ in range(number_local_steps):
-            action_vector, value = policy.act(observation)
+            action_vector, value, new_feature = policy.act(observation, *feature)
             new_observation, reward, done, info = env.step(action_vector.argmax())
 
-            #env.render()
-            buffer_list.add(observation, action_vector[0], reward, value[0], new_observation)
+            env.render()
+            buffer_list.add(observation, action_vector[0], reward, value[0], new_observation, feature)
             episode_values.append(value[0])
             episode_reward += reward
             episode_step_count += 1
 
             observation = new_observation
+            feature = new_feature
 
             # Not necessary: For pong because no of lives left is what is shown
             if info:
                 summ = tf.Summary()
                 for k, v in info.items():
                     summ.value.add(tag=k, simple_value=float(v))
-                self.summary_writer.add_summary(summ, policy.global_step.eval())
+                summary_writer.add_summary(summ, policy.global_step.eval())
+                summary_writer.flush()
 
             env_time_limit = env.spec.tags.get('wrapper_config.TimeLimit.max_episode_steps')
             if done or episode_step_count >= env_time_limit:
                 if episode_step_count >= env_time_limit or not env.metadata.get('semantics.autoreset'):
                     observation = env.reset()
+                feature = policy.state_init
                 print ("Episode over. Rewards: %d, Length: %d" %(episode_reward, episode_step_count))
 
-                summary = tf.Summary()
-                summary.value.add(tag='Perf/Reward', simple_value=float(episode_reward))
-                summary.value.add(tag='Perf/Length', simple_value=float(episode_step_count))
-                summary_writer.add_summary(summary, episode_step_count)
-                summary_writer.flush()
+                # summary = tf.Summary()
+                # summary.value.add(tag='Perf/Reward', simple_value=float(episode_reward))
+                # summary.value.add(tag='Perf/Length', simple_value=float(episode_step_count))
+                # summary_writer.add_summary(summary, episode_step_count)
+                # summary_writer.flush()
 
                 episode_step_count = 0
                 episode_reward = 0
                 break
 
         if not done:
-            value_state = policy.val(observation)
+            value_state = policy.val(observation, *feature)
             # print "Value state: ", value_state
             buffer_list.add_value_state(value_state)
 
@@ -129,7 +135,7 @@ def run_game_instance(env, policy, number_local_steps, summary_writer):
 
 def process_buffer(buffer_list, gamma, lamda=1.0):
     fetched = buffer_list.sample_batch()
-    batch_si, action, rewards, values, value_state = fetched[0], fetched[1], fetched[2], fetched[3], fetched[4]
+    batch_si, action, rewards, values, features, value_state = fetched[0], fetched[1], fetched[2], fetched[3], fetched[4], fetched[5]
     #Take rewards and values from buffer_list and generate advantage and discounted rewards
     
     rewards_plus = np.append(rewards, [value_state]) 
@@ -138,4 +144,4 @@ def process_buffer(buffer_list, gamma, lamda=1.0):
     advantage = rewards + gamma * value_plus[1:] - value_plus[:-1]
     advantage = discount(advantage, gamma * lamda)
 
-    return batch_si, action, discounted_reward, advantage
+    return batch_si, action, discounted_reward, advantage, features

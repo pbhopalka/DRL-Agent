@@ -50,6 +50,7 @@ class A3C():
             tf.summary.scalar("Model/Gradient_Global_norm", tf.global_norm(grads))
             self.summary_op = tf.summary.merge_all()
 
+            # TODO: Why clip? 
             grads, _ = tf.clip_by_global_norm(grads, 40.0)
 
             self.update_op = tf.group(*[v1.assign(v2) for v1, v2 in zip(self.local_AC.var_list, self.network.var_list)])
@@ -69,19 +70,23 @@ class A3C():
     
     def train_data(self, sess):
         sess.run(self.update_op)
+        # print "This happened", fetched[2]
         batches = self.runner.queue.get(timeout=600.0)
-        state, action, reward, advantage = process_buffer(batches, gamma=0.99, lamda=1.0)
+        state, action, reward, advantage, features = process_buffer(batches, gamma=0.99, lamda=1.0)
 
         fetches = [self.summary_op, self.train_op, self.global_step]
 
         feed_dict = {
             self.local_AC.x: state,
+            self.local_AC.c_in: features[0],
+            self.local_AC.h_in: features[1],
             self.action:action,
             self.advantage:advantage, 
             self.target_v:reward
         }
 
         fetched = sess.run(fetches, feed_dict=feed_dict)
+        
         
         self.summary_writer.add_summary(tf.Summary.FromString(fetched[0]), fetched[-1])
         self.summary_writer.flush()

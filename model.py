@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import tensorflow.contrib.rnn as rnn
 import logging
 import tensorflow.contrib.slim as slim
 
@@ -24,6 +25,8 @@ def normalized_columns_initializer(std=1.0):
 Takes the input image, makes a weight variable and bias and then
 applies ConvNet to it
 '''
+def flatten(x):
+    return tf.reshape(x, [-1, np.prod(x.get_shape().as_list()[1:])])
 
 
 def conv(x, num_filters, name, filter_size=(3, 3), stride=(1, 1), pad="SAME", dtype=tf.float32):
@@ -66,13 +69,31 @@ class Model():
         for i in range(4):
             x = tf.nn.elu(conv(x, 32, "l" + str(i), stride=[2, 2]))
 
-        self.after_conv = x
+        x = tf.expand_dims(flatten(x), [0])
 
-        hidden = slim.fully_connected(
-                slim.flatten(x), 256, activation_fn=tf.nn.elu)
+        size = 256
+        lstm = rnn.BasicLSTMCell(size, state_is_tuple=True)
+        self.state_size = lstm.state_size
+        # print "LSTM state size:", lstm.state_size
+
+        step_size = tf.shape(self.x)[:1]
+        c_init = np.zeros((1, lstm.state_size.c), np.float32)
+        h_init = np.zeros((1, lstm.state_size.h), np.float32)
+        self.state_init = [c_init, h_init]
+        
+        self.c_in = tf.placeholder(tf.float32, [1, lstm.state_size.c])
+        self.h_in = tf.placeholder(tf.float32, [1, lstm.state_size.h])
+        # self.state_in = [c_in, h_in]
+
+        state_in = rnn.LSTMStateTuple(self.c_in, self.h_in)
+
+        output, l_state = tf.nn.dynamic_rnn(
+                lstm, x, initial_state=state_in, sequence_length=step_size)
+        c_out, h_out = l_state
         # Reshaping into 256 nodes
-        x = tf.reshape(hidden, [-1, 256])
-
+        x = tf.reshape(output, [-1, size])
+        self.state_out = [c_out[:1, :], h_out[:1, :]]
+        
         self.policy = fully_connected(
             x, ac_space, "action", normalized_columns_initializer(0.01))
         epsila_greedy = tf.multinomial(self.policy, 1)[0]
@@ -81,14 +102,21 @@ class Model():
             x, 1, "value", normalized_columns_initializer(1.0)), [-1])
         self.var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name) 
 
-    def act(self, state):
+    def get_init_features(self):
+        return self.state_init
+    
+    def act(self, state, c, h):
+        # print "After acting: c: ", features[0].size
+        # print "After acting, h: ", features[1].size
         sess = tf.get_default_session()
-        action_onehot, value = sess.run(
-            [self.action, self.value], feed_dict={self.x: [state]})
+        action_onehot, value, feature = sess.run(
+            [self.action, self.value, self.state_out], 
+                feed_dict={self.x: [state], self.c_in: c, self.h_in: h})
 
-        return action_onehot, value
+        return action_onehot, value, feature
 
-    def val(self, state):
+    def val(self, state, c, h):
         sess = tf.get_default_session()
-        val = sess.run(self.value, feed_dict={self.x: [state]})[0]
+        val = sess.run(self.value, 
+                feed_dict={self.x: [state], self.c_in: c, self.h_in: h})[0]
         return val
