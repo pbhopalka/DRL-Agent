@@ -1,5 +1,6 @@
 import sys
 import signal
+import go_vncdriver
 import tensorflow as tf
 import time
 import argparse
@@ -9,7 +10,13 @@ from A3c import A3C
 
 def run_game(env_name, number, server):
     env = create_atari_env(env_name)
-    actor_critic = A3C(env, number)
+
+
+    logdir = '/tmp/' + env_name + '-adam-LSTM/'
+    # Try using Adam, RMSProp, Adadelta, etc.
+    trainer = tf.train.AdamOptimizer(1e-4)
+
+    actor_critic = A3C(env, number, trainer)
 
     var_to_save = [v for v in tf.global_variables() if not v.name.startswith("local")]
     init_op = tf.variables_initializer(var_to_save)
@@ -20,7 +27,6 @@ def run_game(env_name, number, server):
         sess.run(init_all_op)
 
     saver = tf.train.Saver(max_to_keep=5)
-    logdir = '/tmp/pong-worker-LSTM/'
     save_path = logdir + "model/"
     config = tf.ConfigProto(device_filters=["/job:ps", "/job:worker/task:"+str(number)+"/cpu:0"])
     summary_writer = tf.summary.FileWriter(logdir + "train_"+str(number))

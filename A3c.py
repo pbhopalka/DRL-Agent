@@ -6,7 +6,7 @@ from model import Model
 from game import RunThread, process_buffer
 
 class A3C():
-    def __init__(self, env, number):
+    def __init__(self, env, number, trainer):
         self.env = env
         self.number = number
 
@@ -58,8 +58,9 @@ class A3C():
             grads_vars = list(zip(grads, self.network.var_list))
             inc_global_step = self.global_step.assign_add(tf.shape(self.local_AC.x)[0])
 
-            trainer = tf.train.RMSPropOptimizer(1e-4)
+            # trainer = tf.train.AdamOptimizer(1e-4)
             self.train_op = tf.group(trainer.apply_gradients(grads_vars), inc_global_step)
+            self.summary_writer = None
 
     def start_app(self, sess, summary_writer):
         self.runner.start_thread(sess, summary_writer)
@@ -70,7 +71,7 @@ class A3C():
     
     def train_data(self, sess):
         sess.run(self.update_op)
-        # print "This happened", fetched[2]
+        # TODO: When taking batches, in the actual code, it has extended as well. I haven't
         batches = self.runner.queue.get(timeout=600.0)
         state, action, reward, advantage, features = process_buffer(batches, gamma=0.99, lamda=1.0)
 
