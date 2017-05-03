@@ -1,14 +1,30 @@
-This is the final year project for Team Convolution.
+# Playing Atari Games using Deep Reinforcement Learning
 
-We are trying to build a Reinforcement Learning Agent for the Pong game using Asynchronous Advantage
+This is the final year project for Team Convolution. We have done a survey about Deep Reinforcement Learning and 
+are testing its applications on various Atari Games.
+
+We are trying to build a Reinforcement Learning Agent for atari game using Asynchronous Advantage
 Actor-Critic (A3C) algorithm which has been described in [this paper](https://arxiv.org/pdf/1602.01783.pdf).
 
 This code is heavily inspired from the works of [OpenAI/universe-starter-agent](https://github.com/openai/universe-starter-agent) and [Deep-RL agent](https://github.com/awjuliani/DeepRL-Agents/blob/master/A3C-Doom.ipynb). You may go through these codes if you
 feel like doing so.
 
-We will be implementating a bit different algorithm in a few days. It will supposedly be a minor modification
-to the propsed algorithm.
+We have implemented the A3C algorithm and have tested the various Gradient Descent/Ascent Optimization Techniques like Adadelta, 
+RMSProp and Adam. You can read about them [here](http://sebastianruder.com/optimizing-gradient-descent/).
 
-To run the code, simply type:
+## Running the code
 
-python doom.py 
+Firstly make sure you run `script_install_before.sh` in your terminal so that all the prerequisite libraries are installed.
+
+To run the code, please check the file `run.sh`. Each command in that file needs to run on a separate terminal. 
+A terminal manager like `tmux` can also be used.
+
+# Team Members
+
+Piyush Bhopalka,
+Saksham Agarwal,
+Mahesh Uligade
+
+Please shoot an email at `pbhopalka@gmail.com`, if you have any queries :)
+
+(National Institute of Technology, Calicut)
