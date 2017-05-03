@@ -1,3 +1,6 @@
+'''
+This is the place where the main function can be found. This is where the asynchronous setup is also made
+'''
 import sys
 import signal
 import go_vncdriver
@@ -8,11 +11,14 @@ import argparse
 from envs import create_atari_env
 from A3c import A3C
 
+'''
+Runs the game and trains it. This is what the worker threads do
+'''
 def run_game(env_name, number, server):
     env = create_atari_env(env_name)
 
 
-    logdir = '/tmp/' + env_name + '-adam-LSTM/'
+    logdir = '/tmp/breakout-rmsprop-LSTM/'
     # Try using Adam, RMSProp, Adadelta, etc.
     trainer = tf.train.AdamOptimizer(1e-4)
 
@@ -23,16 +29,20 @@ def run_game(env_name, number, server):
     init_all_op = tf.global_variables_initializer()
 
     def init_fn(sess):
-        # logger.info("Intializing parameters")
+        tf.logging.info("Initializing parameters")
         sess.run(init_all_op)
 
-    saver = tf.train.Saver(max_to_keep=5)
+    saver = tf.train.Saver(var_to_save)
     save_path = logdir + "model/"
     config = tf.ConfigProto(device_filters=["/job:ps", "/job:worker/task:"+str(number)+"/cpu:0"])
     summary_writer = tf.summary.FileWriter(logdir + "train_"+str(number))
 
+    var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
+    tf.logging.info("Trainable variables:")
+    for v in var_list:
+        tf.logging.info('  %s %s', v.name, v.get_shape())
+
     # Using tf.train.Supervisor
-    # TODO: Expanded version of this
     is_chief = (number == 0)
     sv = tf.train.Supervisor(is_chief=is_chief, logdir=logdir, saver=saver, summary_op=None, init_op=init_op, init_fn=init_fn, summary_writer=summary_writer,
                             ready_op=tf.report_uninitialized_variables(var_to_save), global_step=actor_critic.global_step, 
@@ -54,7 +64,11 @@ def run_game(env_name, number, server):
 
     sv.stop()
     tf.logging.info("Reached %s steps. Worker stopped", global_step)
-    
+
+'''
+Defines the clusters needed for the parameter server to initialize for the worker
+threads.
+'''    
 def parallel_work(num_workers, num_ps):
     # For using Distributed Tensorflow
     # Defining the cluster ports for ps(parameter server) and workers
@@ -76,6 +90,10 @@ def parallel_work(num_workers, num_ps):
     print cluster
     return cluster
 
+'''
+Main function that calls the parameter server and the worker servers. 
+Handles parallelism issues.
+'''
 def main():
     tf.logging.set_verbosity(3)
 
@@ -91,7 +109,6 @@ def main():
     cluster = tf.train.ClusterSpec(spec).as_cluster_def()
 
     def shutdown(signal, frame):
-        # TODO: Find out what the argument means
         sys.exit(128+signal)
 
     signal.signal(signal.SIGHUP, shutdown)
@@ -109,6 +126,5 @@ def main():
         print "After server in ps"
         while True:
             time.sleep(1000)
-
 
 main()

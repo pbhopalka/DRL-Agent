@@ -6,7 +6,10 @@ import Queue
 
 from helper import discount
 
-# TODO: Remove the sampling part from sample_batch
+'''
+This class stores the experiences of the game in the form
+(state, action, reward, terminal, next_state, features(c and h))
+'''
 class ReplayBuffer(object): #for storing the experience replays
 
     def __init__(self, random_seed=123):
@@ -33,11 +36,6 @@ class ReplayBuffer(object): #for storing the experience replays
         '''
         batch = self.buffer
 
-        # if self.count < batch_size:
-        #     batch = random.sample(self.buffer, self.count)
-        # else:
-        #     batch = random.sample(self.buffer, batch_size)
-
         s_batch = np.asarray([_[0] for _ in batch])
         a_batch = np.asarray([_[1] for _ in batch])
         r_batch = np.asarray([_[2] for _ in batch])
@@ -51,6 +49,10 @@ class ReplayBuffer(object): #for storing the experience replays
         self.buffer = []
         self.count = 0
 
+'''
+This class instantiates from the Thread class of python.
+It creates a new thread for each worker that we need.
+'''
 class RunThread(threading.Thread):
     def __init__(self, env, policy, number_local_steps):
         threading.Thread.__init__(self)
@@ -75,7 +77,9 @@ class RunThread(threading.Thread):
                 self.queue.put(next(buffer_list), timeout=600.0)
 
 
-
+'''
+Runs a game instance. 
+'''
 def run_game_instance(env, policy, number_local_steps, summary_writer):
 
     episode_values = []
@@ -116,12 +120,6 @@ def run_game_instance(env, policy, number_local_steps, summary_writer):
                 feature = policy.state_init
                 print ("Episode over. Rewards: %d, Length: %d" %(episode_reward, episode_step_count))
 
-                # summary = tf.Summary()
-                # summary.value.add(tag='Perf/Reward', simple_value=float(episode_reward))
-                # summary.value.add(tag='Perf/Length', simple_value=float(episode_step_count))
-                # summary_writer.add_summary(summary, episode_step_count)
-                # summary_writer.flush()
-
                 episode_step_count = 0
                 episode_reward = 0
                 break
@@ -133,11 +131,14 @@ def run_game_instance(env, policy, number_local_steps, summary_writer):
 
         yield buffer_list
 
+'''
+Process the buffer and calculate the discounted rewards and advantge
+'''
 def process_buffer(buffer_list, gamma, lamda=1.0):
     fetched = buffer_list.sample_batch()
     batch_si, action, rewards, values, features, value_state = fetched[0], fetched[1], fetched[2], fetched[3], fetched[4], fetched[5]
-    #Take rewards and values from buffer_list and generate advantage and discounted rewards
     
+    #Take rewards and values from buffer_list and generate advantage and discounted rewards
     rewards_plus = np.append(rewards, [value_state]) 
     discounted_reward = discount(rewards_plus, gamma)[:-1]
     value_plus = np.append(values, [value_state])

@@ -1,3 +1,8 @@
+'''
+This part of the code has been directly taken from https://github.com/openai/universe-starter-agent
+without any major changes. Thanks to OpenAI for providing the code.
+'''
+
 import cv2
 from gym.spaces.box import Box
 import numpy as np
@@ -10,6 +15,7 @@ from universe.wrappers import BlockingReset, GymCoreAction, EpisodeID, Unvectori
 from universe import spaces as vnc_spaces
 from universe.spaces.vnc_event import keycode
 import time
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 universe.configure_logging()

@@ -1,3 +1,15 @@
+'''
+This page contains the code for building the model. 
+The model here consists of (Input Image) -> CNN -> LSTM -> State Value
+                                                    |
+                                                    V
+                                                Action-value
+
+The value of State-Value V(s) and Action-Value Q(s, a) are then sent to the agent
+to make changes in the environment.BaseException
+
+- Team Convolution
+'''
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.rnn as rnn
@@ -6,13 +18,9 @@ import tensorflow.contrib.slim as slim
 
 logging.getLogger().setLevel(logging.INFO)
 
-# Functions required by the class Model
-
 ''' 
 Initializes a matrix of given shape with random numbers
 '''
-
-
 def normalized_columns_initializer(std=1.0):
     def _initializer(shape, dtype=None, partition_info=None):
         out = np.random.randn(*shape).astype(np.float32)
@@ -28,7 +36,9 @@ applies ConvNet to it
 def flatten(x):
     return tf.reshape(x, [-1, np.prod(x.get_shape().as_list()[1:])])
 
-
+'''
+Calls the tf.nn.conv2d function by initializing filter, if not already done
+'''
 def conv(x, num_filters, name, filter_size=(3, 3), stride=(1, 1), pad="SAME", dtype=tf.float32):
     with tf.variable_scope(name):
         stride_shape = [1, stride[0], stride[1], 1]
@@ -48,7 +58,9 @@ def conv(x, num_filters, name, filter_size=(3, 3), stride=(1, 1), pad="SAME", dt
 
         return tf.nn.conv2d(x, w, stride_shape, pad) + b
 
-
+'''
+A simple code for a fully connected layer without any kind of activation function
+'''
 def fully_connected(x, output_size, name, initializer=None, bias_init=0):
     w = tf.get_variable(
         name + "/w", [x.get_shape()[1], output_size], initializer=initializer)
@@ -56,10 +68,12 @@ def fully_connected(x, output_size, name, initializer=None, bias_init=0):
         name + "/b", [output_size], initializer=tf.constant_initializer(bias_init))
     return tf.matmul(x, w) + b
 
-# Actual class Model - the main class for this file that calculates the action
-# and the state value given an image screenshot
-
-
+'''
+The main Model Class that defines the model
+It has two functions that generate the action and values given a state,
+cell-state (c) and history (h) as inputs.
+c and h are required for LSTM
+'''
 class Model():
     def __init__(self, ob_space, ac_space):
         self.x = x = tf.placeholder(
@@ -67,7 +81,7 @@ class Model():
 
         # Using 4 Convolutional layers
         for i in range(4):
-            x = tf.nn.elu(conv(x, 32, "l" + str(i), stride=[2, 2]))
+                x = tf.nn.elu(conv(x, 32, "l" + str(i), stride=[2, 2]))
 
         x = tf.expand_dims(flatten(x), [0])
 
@@ -93,6 +107,7 @@ class Model():
         # Reshaping into 256 nodes
         x = tf.reshape(output, [-1, size])
         self.state_out = [c_out[:1, :], h_out[:1, :]]
+
         
         self.policy = fully_connected(
             x, ac_space, "action", normalized_columns_initializer(0.01))

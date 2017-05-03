@@ -9,7 +9,7 @@ Actor-Critic (A3C) algorithm which has been described in [this paper](https://ar
 This code is heavily inspired from the works of [OpenAI/universe-starter-agent](https://github.com/openai/universe-starter-agent) and [Deep-RL agent](https://github.com/awjuliani/DeepRL-Agents/blob/master/A3C-Doom.ipynb). You may go through these codes if you
 feel like doing so.
 
-We have implemented the A3C algorithm and have tested the various Gradient Descent/Ascent Optimization Techniques like Agadelta, 
+We have implemented the A3C algorithm and have tested the various Gradient Descent/Ascent Optimization Techniques like Adadelta, 
 RMSProp and Adam. You can read about them [here](http://sebastianruder.com/optimizing-gradient-descent/).
 
 ## Running the code
