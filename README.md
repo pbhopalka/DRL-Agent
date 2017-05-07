@@ -19,6 +19,8 @@ Firstly make sure you run `script_install_before.sh` in your terminal so that al
 To run the code, please check the file `run.sh`. Each command in that file needs to run on a separate terminal. 
 A terminal manager like `tmux` can also be used.
 
+To see the progress, run  `tensorboard --logdir=/tmp` in your terminal and then open `http://localhost:6006/` in your browser.
+
 # Team Members
 
 Piyush Bhopalka,
