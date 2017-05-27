@@ -18,7 +18,7 @@ def run_game(env_name, number, server):
     env = create_atari_env(env_name)
 
 
-    logdir = '/tmp/breakout-rmsprop-LSTM/'
+    logdir = '~Desktop/Breakout-v0/Adam/'
     # Try using Adam, RMSProp, Adadelta, etc.
     trainer = tf.train.AdamOptimizer(1e-4)
 
