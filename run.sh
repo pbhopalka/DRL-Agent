@@ -9,4 +9,4 @@ python worker.py --job-name worker --env-id Breakout-v0 --num-workers 4 --task 0
 python worker.py --job-name worker --env-id Breakout-v0 --num-workers 4 --task 1
 python worker.py --job-name worker --env-id Breakout-v0 --num-workers 4 --task 2
 python worker.py --job-name worker --env-id Breakout-v0 --num-workers 4 --task 3
-tensorboard --logdir=/tmp/breakout-rmsprop-LSTM/
+tensorboard --logdir=~/Desktop/Breakout-v0/
