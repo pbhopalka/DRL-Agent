@@ -8,4 +8,3 @@ sudo git clone https://github.com/openai/universe.git
 cd universe
 sudo pip install -e .
 cd ..
-sudo rm -r universe
