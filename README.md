@@ -23,9 +23,9 @@ To see the progress, open `http://localhost:6006/` in your browser.
 
 # Team Members
 
-Piyush Bhopalka,
-Saksham Agarwal,
-Mahesh Uligade
+[Piyush Bhopalka] (https://github.com/pbhopalka),
+[Saksham Agarwal] (https://github.com/sakshamagarwal),
+[Mahesh Uligade] (https://github.com/maheshuligade)
 
 Please shoot an email at `pbhopalka@gmail.com`, if you have any queries :)
 
