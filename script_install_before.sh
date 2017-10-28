@@ -1,3 +1,6 @@
+#sudo is not recommended by while using pip. 
+#if the commands work without sudo, please try them first
+
 sudo pip install --upgrade pip
 sudo pip install --upgrade tensorflow
 sudo pip install gym
