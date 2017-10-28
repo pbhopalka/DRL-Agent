@@ -21,12 +21,22 @@ A terminal manager like `tmux` can also be used.
 
 To see the progress, open `http://localhost:6006/` in your browser.
 
-# Team Members
 
-[Piyush Bhopalka](https://github.com/pbhopalka),
-[Saksham Agarwal](https://github.com/sakshamagarwal),
-[Mahesh Uligade](https://github.com/maheshuligade)
+---------------------
+> **Team Members:** 
 
-Please shoot an email at `pbhopalka@gmail.com`, if you have any queries :)
+> - [Piyush Bhopalka](https://github.com/pbhopalka),
+> - [Saksham Agarwal](https://github.com/sakshamagarwal),
+> - [Mahesh Uligade](https://github.com/maheshuligade)
+
+-----------------------------
+
+Please shoot an email at [Piyush Bhopalka](mailto:pbhopalka@gmail.com), [Mahesh Uligade](mailto:maheshuligade@gmail.com) or [Saksham Agarwal](mailto:sak9agar@gmail.com) if you have any queries :)
 
 (National Institute of Technology, Calicut)
+
+-------------------------
+> **Note:** 
+
+> - We recommend you to install python container like **Ananconda** 
+> - This would not mess up with other scripts/ softwares already running or installed in the system.
